@@ -1,0 +1,146 @@
+{
+  "companies": [
+    {
+      "id": "11111111-0000-0000-0000-000000000001",
+      "name": "Acme Corp",
+      "slug": "acme-corp",
+      "contact_email": "contact@acmecorp.com",
+      "contact_phone": "+1-555-0100",
+      "address": "123 Main Street, New York, NY",
+      "is_active": true,
+      "created_at": "2026-05-20T08:00:00.000Z",
+      "updated_at": "2026-05-20T08:00:00.000Z"
+    },
+    {
+      "id": "c_s78qlomt",
+      "name": "amine sarl",
+      "slug": "amine-sarl",
+      "contact_email": "amine@gmail.com",
+      "is_active": true,
+      "created_at": "2026-05-20T13:49:38.078Z",
+      "updated_at": "2026-05-20T13:49:38.079Z"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "22222222-0000-0000-0000-000000000001",
+      "email": "admin@ticketflow.com",
+      "full_name": "Platform Admin",
+      "role": "admin",
+      "company_id": null,
+      "avatar_url": null,
+      "created_at": "2026-05-20T08:00:00.000Z"
+    },
+    {
+      "id": "22222222-0000-0000-0000-000000000002",
+      "email": "client@acmecorp.com",
+      "full_name": "Alice Client",
+      "role": "client",
+      "company_id": "11111111-0000-0000-0000-000000000001",
+      "avatar_url": null,
+      "created_at": "2026-05-20T08:00:00.000Z"
+    },
+    {
+      "id": "47e01719-7eaf-4e92-89d1-6441cf3c40ed",
+      "email": "amine@gmail.com",
+      "full_name": "amine elidrissi",
+      "company": "amine sarl",
+      "role": "client",
+      "company_id": "c_s78qlomt"
+    }
+  ],
+  "prestataires": [
+    {
+      "id": "33333333-0000-0000-0000-000000000001",
+      "company_id": "11111111-0000-0000-0000-000000000001",
+      "name": "FastSupport SAS",
+      "contact_email": "support@fastsupport.com",
+      "contact_phone": "+1-555-0200",
+      "address": "456 Tech Avenue, San Francisco, CA",
+      "notes": "Preferred IT support vendor",
+      "is_active": true,
+      "created_at": "2026-05-20T08:00:00.000Z",
+      "updated_at": "2026-05-20T08:00:00.000Z"
+    },
+    {
+      "id": "6d9803c3-1e3d-464a-8d4c-50de973514bb",
+      "created_at": "2026-05-20T13:24:30.209Z",
+      "updated_at": "2026-05-20T13:24:30.211Z",
+      "name": "JONY TRAVEL ",
+      "contact_email": "",
+      "contact_phone": "",
+      "address": "",
+      "notes": "",
+      "is_active": true,
+      "company_id": "11111111-0000-0000-0000-000000000001"
+    },
+    {
+      "id": "f5ca8e57-5fe7-4330-af72-b3224a70a5b7",
+      "created_at": "2026-05-20T13:50:43.922Z",
+      "updated_at": "2026-05-20T13:50:43.922Z",
+      "name": "JONY TRAVEL",
+      "contact_email": "",
+      "contact_phone": "",
+      "address": "",
+      "notes": "",
+      "is_active": true,
+      "company_id": "c_s78qlomt"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "444c3e9c-4710-4670-b8e7-16431b45eb07",
+      "created_at": "2026-05-20T13:26:25.148Z",
+      "updated_at": "2026-05-20T13:26:25.148Z",
+      "title": "fixer duplicate Key ",
+      "description": "page transaction affiche erreur duplicate key ",
+      "priority": "high",
+      "category": "support",
+      "prestataire_id": "6d9803c3-1e3d-464a-8d4c-50de973514bb",
+      "created_by": "22222222-0000-0000-0000-000000000002",
+      "company_id": "11111111-0000-0000-0000-000000000001",
+      "status": "open"
+    },
+    {
+      "id": "18530fe4-9231-49dd-b6dc-d6ca07b81646",
+      "created_at": "2026-05-20T13:51:41.780Z",
+      "updated_at": "2026-05-20T13:51:41.780Z",
+      "title": "Duplicate Key",
+      "description": "fixation de erreur lors exécution d'une transaction dans le système ( page dépense )",
+      "priority": "high",
+      "category": "other",
+      "prestataire_id": "f5ca8e57-5fe7-4330-af72-b3224a70a5b7",
+      "created_by": "47e01719-7eaf-4e92-89d1-6441cf3c40ed",
+      "company_id": "c_s78qlomt",
+      "status": "open"
+    }
+  ],
+  "ticket_comments": [
+    {
+      "id": "a6d2ad10-1353-4520-8320-1b245152ddf2",
+      "created_at": "2026-05-20T13:51:59.748Z",
+      "updated_at": "2026-05-20T13:51:59.748Z",
+      "ticket_id": "18530fe4-9231-49dd-b6dc-d6ca07b81646",
+      "company_id": "c_s78qlomt",
+      "author_id": "47e01719-7eaf-4e92-89d1-6441cf3c40ed",
+      "content": "okay",
+      "is_internal": false
+    }
+  ],
+  "ticket_history": [],
+  "missions": [
+    {
+      "id": "e170cc46-6af9-4b10-8f71-de3a0573aba9",
+      "created_at": "2026-05-20T14:47:09.181Z",
+      "updated_at": "2026-05-20T14:47:09.181Z",
+      "name": "refonte site ",
+      "description": null,
+      "prestataire_id": "f5ca8e57-5fe7-4330-af72-b3224a70a5b7",
+      "status": "pending",
+      "start_date": null,
+      "end_date": null,
+      "budget": null,
+      "company_id": "c_s78qlomt"
+    }
+  ]
+}
