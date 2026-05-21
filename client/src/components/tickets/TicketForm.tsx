@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Send, AlertTriangle } from 'lucide-react';
@@ -25,6 +25,7 @@ export function TicketForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -45,11 +46,17 @@ export function TicketForm() {
       <div className="elevated-card p-6 space-y-5 animate-fade-in-up">
         <div className="animate-fade-in-up" style={{ animationDelay: '40ms', animationFillMode: 'backwards' }}>
           <label htmlFor="prestataire_id" className="label">Prestataire <span className="text-red-500">*</span></label>
-          <FormSelect
-            id="prestataire_id"
-            {...register('prestataire_id')}
-            options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
-            placeholder="Sélectionner un prestataire..."
+          <Controller
+            name="prestataire_id"
+            control={control}
+            render={({ field }) => (
+              <FormSelect
+                id="prestataire_id"
+                {...field}
+                options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
+                placeholder="Sélectionner un prestataire..."
+              />
+            )}
           />
           {errors.prestataire_id && (
             <p className="flex items-center gap-1 text-red-500 text-xs mt-1.5 animate-fade-in">
@@ -73,29 +80,41 @@ export function TicketForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in-up" style={{ animationDelay: '120ms', animationFillMode: 'backwards' }}>
           <div>
             <label htmlFor="category" className="label">Category <span className="text-red-500">*</span></label>
-            <FormSelect
-              id="category"
-              {...register('category')}
-              options={[
-                { value: 'bug', label: '🐛 Bug' },
-                { value: 'feature_request', label: '✨ Feature Request' },
-                { value: 'billing', label: '💳 Billing' },
-                { value: 'support', label: '🛟 Support' },
-                { value: 'other', label: '📌 Other' },
-              ]}
+            <Controller
+              name="category"
+              control={control}
+              render={({ field }) => (
+                <FormSelect
+                  id="category"
+                  {...field}
+                  options={[
+                    { value: 'bug', label: '🐛 Bug' },
+                    { value: 'feature_request', label: '✨ Feature Request' },
+                    { value: 'billing', label: '💳 Billing' },
+                    { value: 'support', label: '🛟 Support' },
+                    { value: 'other', label: '📌 Other' },
+                  ]}
+                />
+              )}
             />
           </div>
           <div>
             <label htmlFor="priority" className="label">Priority <span className="text-red-500">*</span></label>
-            <FormSelect
-              id="priority"
-              {...register('priority')}
-              options={[
-                { value: 'low', label: '▲ Low' },
-                { value: 'medium', label: '▲▲ Medium' },
-                { value: 'high', label: '▲▲▲ High' },
-                { value: 'urgent', label: '🔥 Urgent' },
-              ]}
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <FormSelect
+                  id="priority"
+                  {...field}
+                  options={[
+                    { value: 'low', label: '▲ Low' },
+                    { value: 'medium', label: '▲▲ Medium' },
+                    { value: 'high', label: '▲▲▲ High' },
+                    { value: 'urgent', label: '🔥 Urgent' },
+                  ]}
+                />
+              )}
             />
           </div>
         </div>

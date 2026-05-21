@@ -1,57 +1,39 @@
-import { forwardRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Dropdown } from './Dropdown';
-import { cn } from '../../lib/utils';
 
 interface FormSelectOption {
   value: string;
   label: string;
 }
 
-interface FormSelectProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FormSelectProps {
+  id?: string;
+  value: string;
+  onChange: (value: string) => void;
   options: FormSelectOption[];
   placeholder?: string;
+  disabled?: boolean;
+  name?: string;
 }
 
-export const FormSelect = forwardRef<HTMLInputElement, FormSelectProps>(
-  ({ id, options, placeholder = 'Select an option...', value = '', onChange, className, ...props }, ref) => {
-    const [internalValue, setInternalValue] = useState(value as string);
-
-    useEffect(() => {
-      setInternalValue(value as string);
-    }, [value]);
-
-    const handleChange = (newValue: string) => {
-      setInternalValue(newValue);
-      if (onChange) {
-        onChange({
-          target: { value: newValue, name: props.name },
-        } as any);
-      }
-    };
-
-    return (
-      <>
-        <input
-          ref={ref}
-          id={id}
-          type="hidden"
-          value={internalValue}
-          onChange={onChange}
-          className={className}
-          {...props}
-        />
-        <Dropdown
-          id={`${id}-dropdown`}
-          value={internalValue}
-          onChange={handleChange}
-          options={options}
-          placeholder={placeholder}
-          disabled={props.disabled}
-          className={cn('cursor-pointer')}
-        />
-      </>
-    );
-  }
-);
-
-FormSelect.displayName = 'FormSelect';
+export function FormSelect({
+  id,
+  value,
+  onChange,
+  options,
+  placeholder = 'Select an option...',
+  disabled = false,
+  name,
+}: FormSelectProps) {
+  return (
+    <Dropdown
+      id={id}
+      value={value}
+      onChange={onChange}
+      options={options}
+      placeholder={placeholder}
+      disabled={disabled}
+      className="cursor-pointer"
+    />
+  );
+}

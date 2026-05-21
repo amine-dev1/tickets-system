@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Loader2, Save, Briefcase } from 'lucide-react';
@@ -33,7 +33,7 @@ export function MissionsForm() {
   const isAdmin = window.location.pathname.startsWith('/admin');
   const basePath = isAdmin ? '/admin/missions' : '/missions';
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { status: 'pending' },
   });
@@ -116,11 +116,17 @@ export function MissionsForm() {
 
           <div>
             <label className="label">Prestataire assigné *</label>
-            <FormSelect
-              id="input-prestataire"
-              {...register('prestataire_id')}
-              options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
-              placeholder="— Sélectionner —"
+            <Controller
+              name="prestataire_id"
+              control={control}
+              render={({ field }) => (
+                <FormSelect
+                  id="input-prestataire"
+                  {...field}
+                  options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
+                  placeholder="— Sélectionner —"
+                />
+              )}
             />
             {errors.prestataire_id && (
               <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.prestataire_id.message}</p>
@@ -151,15 +157,21 @@ export function MissionsForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Statut</label>
-              <FormSelect
-                id="input-status"
-                {...register('status')}
-                options={[
-                  { value: 'pending', label: 'En attente' },
-                  { value: 'in_progress', label: 'En cours' },
-                  { value: 'completed', label: 'Terminée' },
-                  { value: 'cancelled', label: 'Annulée' },
-                ]}
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <FormSelect
+                    id="input-status"
+                    {...field}
+                    options={[
+                      { value: 'pending', label: 'En attente' },
+                      { value: 'in_progress', label: 'En cours' },
+                      { value: 'completed', label: 'Terminée' },
+                      { value: 'cancelled', label: 'Annulée' },
+                    ]}
+                  />
+                )}
               />
             </div>
             <div>
