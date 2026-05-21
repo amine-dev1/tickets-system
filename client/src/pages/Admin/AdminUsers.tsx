@@ -15,7 +15,7 @@ export default function AdminUsers() {
       .select('*')
       .eq('role', 'client')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: { data: Profile[] | null }) => {
         setUsers(data ?? []);
         setLoading(false);
       });

@@ -18,7 +18,7 @@ export function useAuth() {
 
     // Listen for auth changes — callback must be synchronous so Supabase doesn't
     // await it and block signInWithPassword from resolving.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session) => {
       setSession(session);
       if (session?.user) {
         fetchProfile(session.user.id);
