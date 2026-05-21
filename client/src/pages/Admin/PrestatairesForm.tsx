@@ -12,7 +12,7 @@ const schema = z.object({
   contact_phone: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
 });
 
 type FormData = z.infer<typeof schema>;

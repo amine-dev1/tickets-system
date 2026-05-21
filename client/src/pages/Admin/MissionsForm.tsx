@@ -12,7 +12,7 @@ const schema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
   description: z.string().optional(),
   prestataire_id: z.string().uuid('Sélectionner un prestataire'),
-  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).default('pending'),
+  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   budget: z.string().optional(),

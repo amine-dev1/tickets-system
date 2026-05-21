@@ -58,7 +58,7 @@ export default function AdminUsers() {
                     <td className="px-5 py-4 text-gray-400">
                       <span className="flex items-center gap-1.5">
                         <Building className="w-3.5 h-3.5" />
-                        {u.company || '—'}
+                        {typeof u.company === 'object' ? u.company?.name : u.company || '—'}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-gray-500 text-xs">

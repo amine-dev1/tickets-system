@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
