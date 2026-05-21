@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { ArrowLeft, Loader2, Save, Briefcase } from 'lucide-react';
 import { useMission, useCreateMission, useUpdateMission } from '../../hooks/useMissions';
 import { usePrestataires } from '../../hooks/usePrestataires';
+import { FormSelect } from '../../components/ui/FormSelect';
 
 const schema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
@@ -115,12 +116,12 @@ export function MissionsForm() {
 
           <div>
             <label className="label">Prestataire assigné *</label>
-            <select id="input-prestataire" {...register('prestataire_id')} className="input">
-              <option value="">— Sélectionner —</option>
-              {prestataires?.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <FormSelect
+              id="input-prestataire"
+              {...register('prestataire_id')}
+              options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
+              placeholder="— Sélectionner —"
+            />
             {errors.prestataire_id && (
               <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.prestataire_id.message}</p>
             )}
@@ -150,12 +151,16 @@ export function MissionsForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Statut</label>
-              <select id="input-status" {...register('status')} className="input">
-                <option value="pending">En attente</option>
-                <option value="in_progress">En cours</option>
-                <option value="completed">Terminée</option>
-                <option value="cancelled">Annulée</option>
-              </select>
+              <FormSelect
+                id="input-status"
+                {...register('status')}
+                options={[
+                  { value: 'pending', label: 'En attente' },
+                  { value: 'in_progress', label: 'En cours' },
+                  { value: 'completed', label: 'Terminée' },
+                  { value: 'cancelled', label: 'Annulée' },
+                ]}
+              />
             </div>
             <div>
               <label className="label">Budget (€)</label>

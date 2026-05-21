@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { useTickets } from '../../hooks/useTickets';
 import { usePrestataires } from '../../hooks/usePrestataires';
 import { exportTicketsPdf } from '../../lib/exportPdf';
+import { Dropdown } from '../ui/Dropdown';
 
 interface ExportPdfModalProps {
   onClose: () => void;
@@ -99,16 +100,14 @@ export function ExportPdfModal({ onClose }: ExportPdfModalProps) {
               <Building2 className="w-3.5 h-3.5 text-gray-400" />
               Prestataire
             </label>
-            <select
+            <Dropdown
               value={prestataireId}
-              onChange={(e) => setPrestataireId(e.target.value)}
-              className="input"
-            >
-              <option value="all">All Prestataires</option>
-              {prestataires?.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              onChange={setPrestataireId}
+              options={[
+                { value: 'all', label: 'All Prestataires' },
+                ...(prestataires?.map((p) => ({ value: p.id, label: p.name })) || []),
+              ]}
+            />
           </div>
 
           <div>
@@ -116,15 +115,11 @@ export function ExportPdfModal({ onClose }: ExportPdfModalProps) {
               <Tag className="w-3.5 h-3.5 text-gray-400" />
               Status
             </label>
-            <select
+            <Dropdown
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="input"
-            >
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              onChange={setStatus}
+              options={STATUS_OPTIONS}
+            />
           </div>
         </div>
 

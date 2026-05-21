@@ -4,6 +4,7 @@ import { Plus, Search, Briefcase, Building2, ChevronRight, Calendar, Banknote } 
 import { useMissions } from '../../hooks/useMissions';
 import { usePrestataires } from '../../hooks/usePrestataires';
 import { formatDate } from '../../lib/utils';
+import { Dropdown } from '../../components/ui/Dropdown';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tous statuts' },
@@ -82,25 +83,21 @@ export function MissionsList() {
               className="input pl-10"
             />
           </div>
-          <select
+          <Dropdown
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="input w-auto cursor-pointer"
-          >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <select
+            onChange={setStatus}
+            options={STATUS_OPTIONS}
+            className="w-auto"
+          />
+          <Dropdown
             value={prestataireId}
-            onChange={(e) => setPrestataireId(e.target.value)}
-            className="input w-auto cursor-pointer"
-          >
-            <option value="all">Tous prestataires</option>
-            {prestataires?.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+            onChange={setPrestataireId}
+            options={[
+              { value: 'all', label: 'Tous prestataires' },
+              ...(prestataires?.map((p) => ({ value: p.id, label: p.name })) || []),
+            ]}
+            className="w-auto"
+          />
         </div>
 
         {/* Table */}

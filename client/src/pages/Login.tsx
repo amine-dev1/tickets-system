@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,8 +28,13 @@ const FEATURES = [
 
 export default function Login() {
   const navigate = useNavigate();
+  const { user, loading } = useAuthStore();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!loading && user) navigate('/dashboard', { replace: true });
+  }, [user, loading]);
 
   const loginForm = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
   const registerForm = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
@@ -36,8 +42,7 @@ export default function Login() {
   const handleLogin = async (data: LoginForm) => {
     setError('');
     const { error } = await supabase.auth.signInWithPassword(data);
-    if (error) { setError(error.message); return; }
-    navigate('/dashboard');
+    if (error) setError(error.message);
   };
 
   const handleRegister = async (data: RegisterForm) => {
@@ -57,7 +62,6 @@ export default function Login() {
         role: 'client',
       });
     }
-    navigate('/dashboard');
   };
 
   const switchMode = (next: 'login' | 'register') => {

@@ -7,6 +7,7 @@ import { StatusBadge, PriorityBadge } from './TicketBadge';
 import { CommentList } from '../comments/CommentList';
 import { CommentForm } from '../comments/CommentForm';
 import { formatDateTime, CATEGORY_LABELS } from '../../lib/utils';
+import { Dropdown } from '../ui/Dropdown';
 import type { TicketStatus, TicketPriority } from '../../types';
 import { isAdminRole } from '../../types';
 
@@ -110,31 +111,25 @@ export function TicketDetail() {
               </h3>
               <div>
                 <label className="label text-xs">Status</label>
-                <select
+                <Dropdown
                   id="status-select"
                   value={ticket.status}
-                  onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
-                  className="input text-sm"
+                  onChange={(value) => handleStatusChange(value as TicketStatus)}
+                  options={STATUSES.map((s) => ({ value: s, label: s.replace('_', ' ') }))}
                   disabled={updateTicket.isPending}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                  ))}
-                </select>
+                  className="text-sm"
+                />
               </div>
               <div>
                 <label className="label text-xs">Priority</label>
-                <select
+                <Dropdown
                   id="priority-select"
                   value={ticket.priority}
-                  onChange={(e) => handlePriorityChange(e.target.value as TicketPriority)}
-                  className="input text-sm"
+                  onChange={(value) => handlePriorityChange(value as TicketPriority)}
+                  options={PRIORITIES.map((p) => ({ value: p, label: p }))}
                   disabled={updateTicket.isPending}
-                >
-                  {PRIORITIES.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
+                  className="text-sm"
+                />
               </div>
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60">
                 {!showDeleteConfirm ? (

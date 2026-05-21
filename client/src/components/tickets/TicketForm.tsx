@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Send, AlertTriangle } from 'lucide-react';
 import { useCreateTicket } from '../../hooks/useTickets';
-
+import { FormSelect } from '../ui/FormSelect';
 import { usePrestataires } from '../../hooks/usePrestataires';
 
 const schema = z.object({
@@ -45,12 +45,12 @@ export function TicketForm() {
       <div className="elevated-card p-6 space-y-5 animate-fade-in-up">
         <div className="animate-fade-in-up" style={{ animationDelay: '40ms', animationFillMode: 'backwards' }}>
           <label htmlFor="prestataire_id" className="label">Prestataire <span className="text-red-500">*</span></label>
-          <select id="prestataire_id" {...register('prestataire_id')} className="input cursor-pointer">
-            <option value="">Sélectionner un prestataire...</option>
-            {prestataires?.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <FormSelect
+            id="prestataire_id"
+            {...register('prestataire_id')}
+            options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
+            placeholder="Sélectionner un prestataire..."
+          />
           {errors.prestataire_id && (
             <p className="flex items-center gap-1 text-red-500 text-xs mt-1.5 animate-fade-in">
               <AlertTriangle className="w-3 h-3" />
@@ -73,22 +73,30 @@ export function TicketForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in-up" style={{ animationDelay: '120ms', animationFillMode: 'backwards' }}>
           <div>
             <label htmlFor="category" className="label">Category <span className="text-red-500">*</span></label>
-            <select id="category" {...register('category')} className="input cursor-pointer">
-              <option value="bug">🐛 Bug</option>
-              <option value="feature_request">✨ Feature Request</option>
-              <option value="billing">💳 Billing</option>
-              <option value="support">🛟 Support</option>
-              <option value="other">📌 Other</option>
-            </select>
+            <FormSelect
+              id="category"
+              {...register('category')}
+              options={[
+                { value: 'bug', label: '🐛 Bug' },
+                { value: 'feature_request', label: '✨ Feature Request' },
+                { value: 'billing', label: '💳 Billing' },
+                { value: 'support', label: '🛟 Support' },
+                { value: 'other', label: '📌 Other' },
+              ]}
+            />
           </div>
           <div>
             <label htmlFor="priority" className="label">Priority <span className="text-red-500">*</span></label>
-            <select id="priority" {...register('priority')} className="input cursor-pointer">
-              <option value="low">▲ Low</option>
-              <option value="medium">▲▲ Medium</option>
-              <option value="high">▲▲▲ High</option>
-              <option value="urgent">🔥 Urgent</option>
-            </select>
+            <FormSelect
+              id="priority"
+              {...register('priority')}
+              options={[
+                { value: 'low', label: '▲ Low' },
+                { value: 'medium', label: '▲▲ Medium' },
+                { value: 'high', label: '▲▲▲ High' },
+                { value: 'urgent', label: '🔥 Urgent' },
+              ]}
+            />
           </div>
         </div>
 
