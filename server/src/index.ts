@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import ticketRouter from './routes/tickets';
 import commentRouter from './routes/comments';
@@ -12,6 +13,9 @@ import adminRouter from './routes/admin';
 import prestatairesRouter from './routes/prestataires';
 import companiesRouter from './routes/companies';
 import missionsRouter from './routes/missions';
+import uploadRouter from './routes/uploads';
+import authRouter from './routes/auth';
+import { isMock, loadData, saveData } from './lib/supabase';
 
 dotenv.config();
 
@@ -37,26 +41,26 @@ app.use(express.urlencoded({ extended: true }));
 // Rate Limiter for general routes
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  max: 100,
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
-import { isMock, loadData, saveData } from './lib/supabase';
-
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Mock-mode: serve uploaded files as static assets
 if (isMock) {
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
   app.post('/api/mock/profiles', (req, res) => {
     const profile = req.body;
     const profiles = loadData('profiles');
-    
-    // If user registered with a company name, auto-create company & set as company_admin
+
     if (profile.company && !profile.company_id) {
       const companies = loadData('companies') || [];
       let company = companies.find((c: any) => c.name.toLowerCase() === profile.company.toLowerCase());
@@ -92,11 +96,13 @@ if (isMock) {
 }
 
 // Routes
+app.use('/api/auth', authRouter);
+app.use('/api/upload', uploadRouter);
 app.use('/api/companies', companiesRouter);
 app.use('/api/tickets', ticketRouter);
 app.use('/api/prestataires', prestatairesRouter);
 app.use('/api/missions', missionsRouter);
-app.use('/api', commentRouter); // comments handles both ticket-based sub-routes & single comments
+app.use('/api', commentRouter);
 app.use('/api/admin', adminRouter);
 
 // 404 handler
@@ -110,7 +116,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'An unexpected internal server error occurred.' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 TicketFlow server is running at http://localhost:${PORT}`);
-  console.log(`👉 Health check: http://localhost:${PORT}/health`);
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`🚀 TicketFlow server is running on port ${PORT}`);
+  console.log(`👉 Health check: /health`);
+  console.log(`📎 File uploads: POST /api/upload`);
 });

@@ -17,6 +17,8 @@ const createTicketSchema = z.object({
     prestataire_id: z.string().uuid(),
     assigned_to: z.string().uuid().optional(),
     company_id: z.string().uuid().optional(), // For admin override
+    image_url: z.string().url().optional().nullable(),
+    video_url: z.string().url().optional().nullable(),
   }),
 });
 
@@ -26,6 +28,8 @@ const updateTicketSchema = z.object({
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
     category: z.enum(['bug', 'feature_request', 'billing', 'support', 'other']).optional(),
     assigned_to: z.string().uuid().optional().nullable(),
+    image_url: z.string().url().optional().nullable(),
+    video_url: z.string().url().optional().nullable(),
   }),
 });
 
@@ -109,8 +113,8 @@ router.get('/:id', async (req, res): Promise<void> => {
 // POST /api/tickets
 router.post('/', validate(createTicketSchema), async (req, res): Promise<void> => {
   try {
-    const { title, description, priority, category, prestataire_id, assigned_to } = req.body;
-    
+    const { title, description, priority, category, prestataire_id, assigned_to, image_url, video_url } = req.body;
+
     let targetCompanyId = req.companyId;
     if (req.userRole === 'admin') {
        targetCompanyId = req.body.company_id;
@@ -133,6 +137,8 @@ router.post('/', validate(createTicketSchema), async (req, res): Promise<void> =
         created_by: req.user!.id,
         company_id: targetCompanyId,
         status: 'open',
+        image_url: image_url || null,
+        video_url: video_url || null,
       })
       .select('*, created_by_profile:created_by (full_name, email), prestataire:prestataire_id (name)')
       .single();
@@ -156,7 +162,7 @@ router.post('/', validate(createTicketSchema), async (req, res): Promise<void> =
 router.patch('/:id', validate(updateTicketSchema), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
-    const { status, priority, category, assigned_to } = req.body;
+    const { status, priority, category, assigned_to, image_url, video_url } = req.body;
 
     // Retrieve current ticket
     let fetchQuery = supabaseAdmin
@@ -187,6 +193,8 @@ router.patch('/:id', validate(updateTicketSchema), async (req, res): Promise<voi
     if (priority) updateData.priority = priority;
     if (category) updateData.category = category;
     if (assigned_to !== undefined) updateData.assigned_to = assigned_to;
+    if (image_url !== undefined) updateData.image_url = image_url;
+    if (video_url !== undefined) updateData.video_url = video_url;
 
     const { data: ticket, error } = await supabaseAdmin
       .from('tickets')
