@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, Paperclip } from 'lucide-react';
 import { useTicket, useUpdateTicket, useDeleteTicket } from '../../hooks/useTickets';
 import { useAuthStore } from '../../store/authStore';
-import { StatusBadge, PriorityBadge } from './TicketBadge';
+import { PriorityBadge } from './TicketBadge';
+import { StatusSelect } from './StatusSelect';
 import { CommentList } from '../comments/CommentList';
 import { CommentForm } from '../comments/CommentForm';
+import { AttachmentList } from '../attachments/AttachmentList';
+import { FileUpload } from '../attachments/FileUpload';
+import { Select } from '../ui/Select';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { Trash2 } from 'lucide-react';
 import { formatDateTime, CATEGORY_LABELS } from '../../lib/utils';
 import type { TicketStatus, TicketPriority } from '../../types';
-import { isAdminRole } from '../../types';
+import { isStaff, isAdminRole } from '../../types';
 
-const STATUSES: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
 const PRIORITIES: TicketPriority[] = ['low', 'medium', 'high', 'urgent'];
 
 export function TicketDetail() {
@@ -22,6 +27,7 @@ export function TicketDetail() {
   const deleteTicket = useDeleteTicket();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAdmin = isAdminRole(user?.role);
+  const isUserStaff = isStaff(user?.role);
 
   if (isLoading) {
     return (
@@ -62,8 +68,12 @@ export function TicketDetail() {
         <div className="lg:col-span-2 space-y-5">
           {/* Ticket body */}
           <div className="glass-card p-6">
-            <div className="flex flex-wrap gap-2 mb-3">
-              <StatusBadge status={ticket.status} />
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <StatusSelect
+                value={ticket.status}
+                onChange={handleStatusChange}
+                loading={updateTicket.isPending}
+              />
               <PriorityBadge priority={ticket.priority} />
               {ticket.category && (
                 <span className="badge bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-700/50 dark:text-gray-400 dark:border-gray-600/40">
@@ -90,12 +100,26 @@ export function TicketDetail() {
             </p>
           </div>
 
+          {/* Attachments */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                <Paperclip className="w-4 h-4" />
+                Attachments
+              </h3>
+            </div>
+            <AttachmentList ticketId={ticket.id} />
+            <div className="mt-3">
+              <FileUpload ticketId={ticket.id} />
+            </div>
+          </div>
+
           {/* Discussion */}
           <div className="glass-card p-6">
             <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Discussion</h3>
             <CommentList ticketId={ticket.id} />
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/60">
-              <CommentForm ticketId={ticket.id} isAdmin={isAdmin} />
+              <CommentForm ticketId={ticket.id} isStaff={isUserStaff} />
             </div>
           </div>
         </div>
@@ -109,55 +133,26 @@ export function TicketDetail() {
                 Admin Controls
               </h3>
               <div>
-                <label className="label text-xs">Status</label>
-                <select
-                  id="status-select"
-                  value={ticket.status}
-                  onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
-                  className="input text-sm"
-                  disabled={updateTicket.isPending}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
                 <label className="label text-xs">Priority</label>
-                <select
+                <Select
                   id="priority-select"
                   value={ticket.priority}
-                  onChange={(e) => handlePriorityChange(e.target.value as TicketPriority)}
-                  className="input text-sm"
+                  onChange={(v) => handlePriorityChange(v as TicketPriority)}
+                  options={PRIORITIES.map((p) => ({ value: p, label: p }))}
                   disabled={updateTicket.isPending}
-                >
-                  {PRIORITIES.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
+                  fullWidth
+                  size="sm"
+                />
               </div>
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60">
-                {!showDeleteConfirm ? (
-                  <button
-                    id="delete-ticket-btn"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="btn-danger w-full justify-center text-xs"
-                  >
-                    Delete Ticket
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-red-500 dark:text-red-400">Are you sure? This cannot be undone.</p>
-                    <div className="flex gap-2">
-                      <button onClick={handleDelete} className="btn-danger flex-1 justify-center text-xs">
-                        {deleteTicket.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
-                      </button>
-                      <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary flex-1 justify-center text-xs">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <button
+                  id="delete-ticket-btn"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="btn-danger w-full justify-center text-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Supprimer le ticket
+                </button>
               </div>
             </div>
           )}
@@ -192,6 +187,18 @@ export function TicketDetail() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Supprimer ce ticket ?"
+        description={`Le ticket « ${ticket.title} » et toutes ses données (commentaires, pièces jointes, historique) seront définitivement supprimés. Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        variant="danger"
+        loading={deleteTicket.isPending}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

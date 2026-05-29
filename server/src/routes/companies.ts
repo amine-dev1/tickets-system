@@ -3,13 +3,13 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../lib/supabase';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
-import { companyScope, requireAdmin } from '../middleware/companyScope';
+import { companyScope, requireSuperAdmin } from '../middleware/companyScope';
 
 const router = Router();
 
 router.use(requireAuth);
 router.use(companyScope);
-router.use(requireAdmin);
+router.use(requireSuperAdmin);
 
 const createCompanySchema = z.object({
   body: z.object({

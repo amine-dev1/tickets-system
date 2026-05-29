@@ -34,7 +34,7 @@ export function useAuth() {
     setLoading(true);
     const { data } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, company:company_id (id, name, slug, logo_url)')
       .eq('id', userId)
       .single();
     setUser(data);

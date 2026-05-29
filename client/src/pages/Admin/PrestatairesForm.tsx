@@ -70,7 +70,7 @@ export function PrestatairesForm() {
   }
 
   return (
-    <div className="animate-fade-in max-w-2xl mx-auto space-y-6">
+    <div className="animate-fade-in max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="btn-ghost p-2" id="back-btn">

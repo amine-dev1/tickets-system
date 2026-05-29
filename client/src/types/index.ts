@@ -1,10 +1,35 @@
-export type Role = 'admin' | 'client';
+export type Role = 'superadmin' | 'admin' | 'agent' | 'client';
+
+export type PermModule = 'dashboard' | 'tickets' | 'missions' | 'prestataires' | 'users';
+export type PermAction = 'view' | 'create' | 'edit' | 'delete';
+export type ModulePerms = { [key in PermAction]: boolean };
+export type UserPermissionsMap = { [key in PermModule]?: ModulePerms };
+
+export interface UserPermissionsResponse {
+  permissions: UserPermissionsMap;
+  is_custom: boolean;
+}
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TicketCategory = 'bug' | 'feature_request' | 'billing' | 'support' | 'other';
 
-/** Helper to check if a role has admin-level access */
-export const isAdminRole = (role?: Role | string): boolean => role === 'admin';
+/** Global platform admin (across all enterprises) */
+export const isSuperAdmin = (role?: Role | string): boolean => role === 'superadmin';
+
+/** Enterprise admin OR superadmin — has admin-level access (within their scope) */
+export const isAdminRole = (role?: Role | string): boolean =>
+  role === 'admin' || role === 'superadmin';
+
+/** Enterprise agent (tickets-only role within their company) */
+export const isAgent = (role?: Role | string): boolean => role === 'agent';
+
+/** Any staff (can manage tickets) — superadmin, admin, or agent */
+export const isStaff = (role?: Role | string): boolean =>
+  role === 'superadmin' || role === 'admin' || role === 'agent';
+
+/** Can manage enterprise resources (prestataires, missions, users): admin or superadmin */
+export const canManageEnterprise = (role?: Role | string): boolean =>
+  role === 'admin' || role === 'superadmin';
 
 export interface Company {
   id: string;
@@ -13,6 +38,7 @@ export interface Company {
   contact_email: string | null;
   contact_phone: string | null;
   address: string | null;
+  logo_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

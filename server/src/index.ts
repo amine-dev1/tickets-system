@@ -6,12 +6,18 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
+import path from 'path';
 import ticketRouter from './routes/tickets';
 import commentRouter from './routes/comments';
+import attachmentRouter from './routes/attachments';
 import adminRouter from './routes/admin';
 import prestatairesRouter from './routes/prestataires';
 import companiesRouter from './routes/companies';
 import missionsRouter from './routes/missions';
+import notificationsRouter from './routes/notifications';
+import permissionsRouter from './routes/permissions';
+import messagesRouter from './routes/messages';
+import calendarRouter from './routes/calendar';
 
 dotenv.config();
 
@@ -91,13 +97,21 @@ if (isMock) {
   });
 }
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/api/companies', companiesRouter);
 app.use('/api/tickets', ticketRouter);
 app.use('/api/prestataires', prestatairesRouter);
 app.use('/api/missions', missionsRouter);
-app.use('/api', commentRouter); // comments handles both ticket-based sub-routes & single comments
+app.use('/api', commentRouter);
+app.use('/api', attachmentRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/users', permissionsRouter);
+app.use('/api/messages', messagesRouter);
+app.use('/api/calendar', calendarRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // 404 handler
 app.use((req, res) => {

@@ -4,7 +4,9 @@ import { supabaseAdmin } from '../lib/supabase';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
 import { companyScope, requireAdmin } from '../middleware/companyScope';
+import { requirePermission } from '../middleware/checkPermission';
 import { emailService } from '../services/emailService';
+import { notify, getCompanyAdminIds } from '../services/notificationService';
 
 const router = Router();
 
@@ -33,7 +35,7 @@ router.use(requireAuth);
 router.use(companyScope);
 
 // GET /api/tickets
-router.get('/', async (req, res): Promise<void> => {
+router.get('/', requirePermission('tickets', 'view'), async (req, res): Promise<void> => {
   try {
     const { status, priority, search, prestataire_id, assigned_to, unassigned, company_id } = req.query;
     
@@ -42,7 +44,7 @@ router.get('/', async (req, res): Promise<void> => {
       .select('*, created_by_profile:created_by (full_name, email, avatar_url), prestataire:prestataire_id (id, name, contact_email), assigned_to_profile:assigned_to (id, full_name, email, avatar_url)')
       .order('created_at', { ascending: false });
 
-    if (req.userRole === 'admin') {
+    if (req.userRole === 'superadmin') {
       if (company_id && company_id !== 'all') {
         query = query.eq('company_id', company_id as string);
       }
@@ -89,7 +91,7 @@ router.get('/:id', async (req, res): Promise<void> => {
       .select('*, created_by_profile:created_by (full_name, email, avatar_url), prestataire:prestataire_id (*), assigned_to_profile:assigned_to (id, full_name, email, avatar_url)')
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
        query = query.eq('company_id', req.companyId);
     }
 
@@ -107,12 +109,12 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // POST /api/tickets
-router.post('/', validate(createTicketSchema), async (req, res): Promise<void> => {
+router.post('/', requirePermission('tickets', 'create'), validate(createTicketSchema), async (req, res): Promise<void> => {
   try {
     const { title, description, priority, category, prestataire_id, assigned_to } = req.body;
     
     let targetCompanyId = req.companyId;
-    if (req.userRole === 'admin') {
+    if (req.userRole === 'superadmin') {
        targetCompanyId = req.body.company_id;
        if (!targetCompanyId) {
          res.status(400).json({ error: 'Company ID required for admin creating tickets' });
@@ -144,7 +146,24 @@ router.post('/', validate(createTicketSchema), async (req, res): Promise<void> =
 
     // Email notification
     const creatorName = ticket.created_by_profile?.full_name || 'User';
-    await emailService.notifyNewTicket(creatorName, ticket.id, ticket.title);
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.FROM_EMAIL || 'onboarding@resend.dev';
+    await emailService.notifyNewTicket(creatorName, ticket.id, ticket.title, ticket.priority, adminEmail);
+
+    // In-app notification: notify admins when an agent creates a ticket
+    if (req.userRole === 'agent') {
+      const adminIds = await getCompanyAdminIds(targetCompanyId, req.user!.id);
+      await notify({
+        recipientIds: adminIds,
+        actorId: req.user!.id,
+        companyId: targetCompanyId,
+        type: 'ticket_created',
+        title: `Nouveau ticket créé par ${creatorName}`,
+        message: ticket.title,
+        entity_type: 'ticket',
+        entity_id: ticket.id,
+        link: `/tickets/${ticket.id}`,
+      });
+    }
 
     res.status(201).json(ticket);
   } catch (error) {
@@ -153,7 +172,7 @@ router.post('/', validate(createTicketSchema), async (req, res): Promise<void> =
 });
 
 // PATCH /api/tickets/:id
-router.patch('/:id', validate(updateTicketSchema), async (req, res): Promise<void> => {
+router.patch('/:id', requirePermission('tickets', 'edit'), validate(updateTicketSchema), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const { status, priority, category, assigned_to } = req.body;
@@ -164,7 +183,7 @@ router.patch('/:id', validate(updateTicketSchema), async (req, res): Promise<voi
       .select('*, prestataire:prestataire_id (contact_email, name)')
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       fetchQuery = fetchQuery.eq('company_id', req.companyId);
     }
 
@@ -223,17 +242,39 @@ router.patch('/:id', validate(updateTicketSchema), async (req, res): Promise<voi
       await supabaseAdmin.from('ticket_history').insert(auditLogs);
     }
 
+    // In-app notification: notify admins when an agent updates a ticket
+    if (req.userRole === 'agent' && auditLogs.length > 0) {
+      const adminIds = await getCompanyAdminIds(currentTicket.company_id, req.user!.id);
+      const changes = auditLogs.map(l => l.field).join(', ');
+      await notify({
+        recipientIds: adminIds,
+        actorId: req.user!.id,
+        companyId: currentTicket.company_id,
+        type: status && status !== currentTicket.status ? 'ticket_status_changed' : 'ticket_updated',
+        title: `Ticket modifié : ${changes}`,
+        message: ticket.title,
+        entity_type: 'ticket',
+        entity_id: id as string,
+        link: `/tickets/${id}`,
+      });
+    }
+
     res.json(ticket);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// DELETE /api/tickets/:id - Admin deletes ticket
-router.delete('/:id', requireAdmin, async (req, res): Promise<void> => {
+// DELETE /api/tickets/:id - Enterprise admin / superadmin deletes ticket
+router.delete('/:id', requireAdmin, requirePermission('tickets', 'delete'), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     let query = supabaseAdmin.from('tickets').delete().eq('id', id);
+
+    // Enterprise admins can only delete tickets in their own company
+    if (req.userRole !== 'superadmin') {
+      query = query.eq('company_id', req.companyId);
+    }
 
     const { error } = await query;
     if (error) {

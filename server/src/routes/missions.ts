@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../lib/supabase';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
-import { companyScope } from '../middleware/companyScope';
+import { companyScope, requireEnterpriseAdmin } from '../middleware/companyScope';
+import { requirePermission } from '../middleware/checkPermission';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ router.use(requireAuth);
 router.use(companyScope);
 
 // GET /api/missions
-router.get('/', async (req, res): Promise<void> => {
+router.get('/', requirePermission('missions', 'view'), async (req, res): Promise<void> => {
   try {
     const { search, status, prestataire_id, company_id } = req.query;
 
@@ -45,7 +46,7 @@ router.get('/', async (req, res): Promise<void> => {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (req.userRole === 'admin') {
+    if (req.userRole === 'superadmin') {
       if (company_id && company_id !== 'all') {
         query = query.eq('company_id', company_id as string);
       }
@@ -88,7 +89,7 @@ router.get('/:id', async (req, res): Promise<void> => {
       .select('*')
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       query = query.eq('company_id', req.companyId);
     }
 
@@ -106,9 +107,9 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // POST /api/missions
-router.post('/', validate(createMission), async (req, res): Promise<void> => {
+router.post('/', requireEnterpriseAdmin, requirePermission('missions', 'create'), validate(createMission), async (req, res): Promise<void> => {
   try {
-    const company_id = req.userRole === 'admin' ? req.body.company_id : req.companyId;
+    const company_id = req.userRole === 'superadmin' ? req.body.company_id : req.companyId;
 
     if (!company_id) {
       res.status(400).json({ error: 'Company ID required' });
@@ -127,7 +128,7 @@ router.post('/', validate(createMission), async (req, res): Promise<void> => {
       return;
     }
 
-    if (req.userRole !== 'admin' && prest.company_id !== company_id) {
+    if (req.userRole !== 'superadmin' && prest.company_id !== company_id) {
       res.status(403).json({ error: 'Prestataire does not belong to your company' });
       return;
     }
@@ -155,7 +156,7 @@ router.post('/', validate(createMission), async (req, res): Promise<void> => {
 });
 
 // PATCH /api/missions/:id
-router.patch('/:id', validate(updateMission), async (req, res): Promise<void> => {
+router.patch('/:id', requireEnterpriseAdmin, requirePermission('missions', 'edit'), validate(updateMission), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const updates = { ...req.body, updated_at: new Date().toISOString() };
@@ -168,7 +169,7 @@ router.patch('/:id', validate(updateMission), async (req, res): Promise<void> =>
       .update(updates)
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       query = query.eq('company_id', req.companyId);
     }
 
@@ -186,7 +187,7 @@ router.patch('/:id', validate(updateMission), async (req, res): Promise<void> =>
 });
 
 // DELETE /api/missions/:id
-router.delete('/:id', async (req, res): Promise<void> => {
+router.delete('/:id', requireEnterpriseAdmin, requirePermission('missions', 'delete'), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -195,7 +196,7 @@ router.delete('/:id', async (req, res): Promise<void> => {
       .delete()
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       query = query.eq('company_id', req.companyId);
     }
 

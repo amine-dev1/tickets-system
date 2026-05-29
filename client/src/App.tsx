@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from './hooks/useAuth';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { CallProvider } from './hooks/useCall';
+import { CallOverlay } from './components/CallOverlay';
 import { Layout } from './components/layout/Layout';
-import { ProtectedRoute, AdminRoute } from './guards';
+import { ProtectedRoute, AdminRoute, SuperAdminRoute, StaffRoute } from './guards';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
@@ -11,6 +14,10 @@ import TicketDetailPage from './pages/TicketDetail';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminTickets from './pages/Admin/AdminTickets';
 import AdminUsers from './pages/Admin/AdminUsers';
+import AdminPermissions from './pages/Admin/AdminPermissions';
+import AdminMyCompany from './pages/Admin/AdminMyCompany';
+import Messages from './pages/Messages';
+import Calendar from './pages/Calendar';
 import { PrestatairesList } from './pages/Admin/PrestatairesList';
 import { PrestatairesForm } from './pages/Admin/PrestatairesForm';
 import { PrestatairesDetail } from './pages/Admin/PrestatairesDetail';
@@ -41,6 +48,7 @@ function AppRoutes() {
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
           <Route path="/tickets/:id" element={<TicketDetailPage />} />
+          <Route path="/messages" element={<Messages />} />
           {/* Client Prestataires CRUD */}
           <Route path="/prestataires" element={<PrestatairesList />} />
           <Route path="/prestataires/new" element={<PrestatairesForm />} />
@@ -54,13 +62,22 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* Admin routes */}
-      <Route element={<AdminRoute />}>
+      {/* Staff routes (SuperAdmin, Admin, Agent) */}
+      <Route element={<StaffRoute />}>
         <Route element={<Layout />}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/tickets" element={<AdminTickets />} />
           <Route path="/admin/tickets/:id" element={<TicketDetailPage />} />
+          <Route path="/calendar" element={<Calendar />} />
+        </Route>
+      </Route>
+
+      {/* Enterprise Admin routes (SuperAdmin, Admin) */}
+      <Route element={<AdminRoute />}>
+        <Route element={<Layout />}>
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/permissions" element={<AdminPermissions />} />
+          <Route path="/admin/my-company" element={<AdminMyCompany />} />
            {/* Prestataires CRUD */}
           <Route path="/admin/prestataires" element={<PrestatairesList />} />
           <Route path="/admin/prestataires/new" element={<PrestatairesForm />} />
@@ -71,6 +88,12 @@ function AppRoutes() {
           <Route path="/admin/missions/new" element={<MissionsForm />} />
           <Route path="/admin/missions/:id" element={<MissionsDetail />} />
           <Route path="/admin/missions/:id/edit" element={<MissionsForm />} />
+        </Route>
+      </Route>
+
+      {/* SuperAdmin routes (Companies management) */}
+      <Route element={<SuperAdminRoute />}>
+        <Route element={<Layout />}>
           {/* Companies CRUD */}
           <Route path="/admin/companies" element={<CompaniesList />} />
           <Route path="/admin/companies/new" element={<CompanyForm />} />
@@ -87,10 +110,15 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <CallProvider>
+            <AppRoutes />
+            <CallOverlay />
+          </CallProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

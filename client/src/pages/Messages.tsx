@@ -9,8 +9,9 @@ import { getInitials, formatRelative } from '../lib/utils';
 import {
   Loader2, Search, Send, MessageSquare, Plus, X, CheckCheck, Check,
   ArrowLeft, User as UserIcon, Users, Settings, Trash2, LogOut, UserPlus,
-  Ticket as TicketIcon, Briefcase, Pencil, ImagePlus,
+  Ticket as TicketIcon, Briefcase, Pencil, ImagePlus, Phone, Video,
 } from 'lucide-react';
+import { useCall } from '../hooks/useCall';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -369,6 +370,7 @@ function ConvoAvatar({ convo, size = 36 }: { convo: Conversation; size?: number 
 function ChatPanel({ convo, onBack }: { convo: Conversation; onBack: () => void }) {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const { startCall, status: callStatus } = useCall();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState('');
@@ -490,6 +492,32 @@ function ChatPanel({ convo, onBack }: { convo: Conversation; onBack: () => void 
             {convo.link && <LinkBadge link={convo.link} />}
           </div>
         </div>
+        {!convo.is_group && convo.other_user && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => startCall(
+                { id: convo.other_user!.id, name: convo.other_user!.full_name || convo.other_user!.email },
+                false,
+              )}
+              disabled={callStatus !== 'idle'}
+              className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Appel audio"
+            >
+              <Phone className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => startCall(
+                { id: convo.other_user!.id, name: convo.other_user!.full_name || convo.other_user!.email },
+                true,
+              )}
+              disabled={callStatus !== 'idle'}
+              className="p-2 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Appel vidéo"
+            >
+              <Video className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {convo.is_group && (
           <button
             onClick={() => setShowManage(true)}

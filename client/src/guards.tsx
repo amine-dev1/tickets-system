@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Loader2, ShieldAlert, LogOut } from 'lucide-react';
-import { isAdminRole } from './types';
+import { isAdminRole, isSuperAdmin, isStaff } from './types';
 
 export function ProtectedRoute() {
   const { user, loading, logout } = useAuthStore();
@@ -17,7 +17,8 @@ export function ProtectedRoute() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (user.role === 'client' && !user.company_id) {
+  // Non-superadmin user without a company → pending account
+  if (!isSuperAdmin(user.role) && !user.company_id) {
     const handleLogout = async () => {
       await logout();
       navigate('/login');
@@ -50,6 +51,7 @@ export function ProtectedRoute() {
   return <Outlet />;
 }
 
+/** Routes accessible to admin OR superadmin (admin panel within enterprise scope) */
 export function AdminRoute() {
   const { user, loading } = useAuthStore();
 
@@ -63,6 +65,42 @@ export function AdminRoute() {
 
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdminRole(user.role)) return <Navigate to="/dashboard" replace />;
+
+  return <Outlet />;
+}
+
+/** Routes accessible ONLY to superadmin (global platform features) */
+export function SuperAdminRoute() {
+  const { user, loading } = useAuthStore();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isSuperAdmin(user.role)) return <Navigate to="/admin" replace />;
+
+  return <Outlet />;
+}
+
+/** Routes accessible to any staff (superadmin, admin, agent) */
+export function StaffRoute() {
+  const { user, loading } = useAuthStore();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isStaff(user.role)) return <Navigate to="/dashboard" replace />;
 
   return <Outlet />;
 }
