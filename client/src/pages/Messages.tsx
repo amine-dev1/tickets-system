@@ -9,7 +9,7 @@ import { getInitials, formatRelative } from '../lib/utils';
 import {
   Loader2, Search, Send, MessageSquare, Plus, X, CheckCheck, Check,
   ArrowLeft, User as UserIcon, Users, Settings, Trash2, LogOut, UserPlus,
-  Ticket as TicketIcon, Briefcase, Pencil,
+  Ticket as TicketIcon, Briefcase, Pencil, ImagePlus,
 } from 'lucide-react';
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -52,7 +52,9 @@ interface Message {
   id: string;
   conversation_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
+  image_url: string | null;
+  image_name: string | null;
   read_at: string | null;
   created_at: string;
 }
@@ -61,6 +63,14 @@ interface Message {
 
 const convoTitle = (c: Conversation) =>
   c.is_group ? (c.name || 'Groupe') : (c.other_user?.full_name || c.other_user?.email || 'Conversation');
+
+/** Short preview text for a message in the conversation list. */
+const messagePreview = (m: Message | null): string => {
+  if (!m) return '';
+  if (m.content) return m.content;
+  if (m.image_url) return '📷 Image';
+  return '';
+};
 
 function LinkBadge({ link }: { link: ConvLink }) {
   const Icon = link.type === 'ticket' ? TicketIcon : Briefcase;
@@ -134,7 +144,7 @@ export default function Messages() {
       list = list.filter(c =>
         convoTitle(c).toLowerCase().includes(q) ||
         (c.other_user?.email.toLowerCase().includes(q) ?? false) ||
-        (c.last_message?.content.toLowerCase().includes(q) ?? false) ||
+        (c.last_message?.content?.toLowerCase().includes(q) ?? false) ||
         (c.link?.label.toLowerCase().includes(q) ?? false),
       );
     }
@@ -270,7 +280,7 @@ export default function Messages() {
                           <div className="flex items-center justify-between gap-2 mt-0.5">
                             <p className={`text-xs truncate ${convo.unread_count > 0 && !isFromMe ? 'font-semibold text-gray-700 dark:text-gray-200' : 'text-gray-400'}`}>
                               {isFromMe && convo.last_message ? <span className="text-gray-400">Vous : </span> : null}
-                              {convo.last_message?.content ?? <em className="opacity-60">Pas encore de message</em>}
+                              {convo.last_message ? messagePreview(convo.last_message) : <em className="opacity-60">Pas encore de message</em>}
                             </p>
                             {convo.unread_count > 0 && !isFromMe && (
                               <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-brand-500 text-white text-[10px] font-bold flex-shrink-0">
@@ -360,8 +370,30 @@ function ChatPanel({ convo, onBack }: { convo: Conversation; onBack: () => void 
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState('');
   const [showManage, setShowManage] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [sendError, setSendError] = useState('');
+
+  /* Build/revoke an object URL for the pending image preview */
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(null); return; }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+  const pickImage = (file: File | null) => {
+    setSendError('');
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setSendError('Seules les images sont autorisées.'); return; }
+    if (file.size > MAX_IMAGE_BYTES) { setSendError('L\'image dépasse 10 Mo.'); return; }
+    setImageFile(file);
+  };
+  const clearImage = () => { setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ['messages', convo.id],
@@ -395,20 +427,30 @@ function ChatPanel({ convo, onBack }: { convo: Conversation; onBack: () => void 
   }, [messages.length]);
 
   const sendMutation = useMutation({
-    mutationFn: (content: string) =>
-      api.post(`/messages/conversations/${convo.id}/messages`, { content }).then(r => r.data),
+    mutationFn: ({ content, image }: { content: string; image: File | null }) => {
+      if (image) {
+        const form = new FormData();
+        if (content) form.append('content', content);
+        form.append('image', image);
+        return api.post(`/messages/conversations/${convo.id}/messages`, form, { timeout: 120000 }).then(r => r.data);
+      }
+      return api.post(`/messages/conversations/${convo.id}/messages`, { content }).then(r => r.data);
+    },
     onSuccess: () => {
       setDraft('');
+      clearImage();
+      setSendError('');
       queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
+    onError: (err: any) => setSendError(err.response?.data?.error || err.message || 'Échec de l\'envoi.'),
   });
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     const content = draft.trim();
-    if (!content || sendMutation.isPending) return;
-    sendMutation.mutate(content);
+    if ((!content && !imageFile) || sendMutation.isPending) return;
+    sendMutation.mutate({ content, image: imageFile });
   };
 
   /* Index of the most recent message I sent that the other user has read (1:1 only). */
@@ -482,14 +524,24 @@ function ChatPanel({ convo, onBack }: { convo: Conversation; onBack: () => void 
                     {senderLabel(m.sender_id)}
                   </span>
                 )}
-                <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm break-words whitespace-pre-wrap shadow-sm
+                <div className={`max-w-[75%] ${m.image_url ? 'p-1.5' : 'px-3.5 py-2'} rounded-2xl text-sm break-words whitespace-pre-wrap shadow-sm
                     ${isMine
                       ? 'bg-brand-500 text-white rounded-br-sm'
                       : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700/60 rounded-bl-sm'
                     }`}
                 >
-                  {m.content}
-                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMine ? 'text-white/70' : 'text-gray-400'}`}>
+                  {m.image_url && (
+                    <a href={m.image_url} target="_blank" rel="noopener noreferrer" className="block">
+                      <img
+                        src={m.image_url}
+                        alt={m.image_name ?? 'image'}
+                        className="rounded-xl max-h-64 w-auto object-cover cursor-zoom-in"
+                        loading="lazy"
+                      />
+                    </a>
+                  )}
+                  {m.content && <div className={m.image_url ? 'px-2 pt-1.5' : ''}>{m.content}</div>}
+                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${m.image_url ? 'px-2 pb-0.5' : ''} ${isMine ? 'text-white/70' : 'text-gray-400'}`}>
                     <span>{formatRelative(m.created_at)}</span>
                     {!convo.is_group && isMine && (m.read_at
                       ? <CheckCheck className="w-3.5 h-3.5 text-sky-300" />
@@ -510,25 +562,64 @@ function ChatPanel({ convo, onBack }: { convo: Conversation; onBack: () => void 
       </div>
 
       {/* Composer */}
-      <form onSubmit={handleSend} className="border-t border-gray-100 dark:border-gray-800/60 p-3 flex items-end gap-2">
-        <textarea
-          rows={1}
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); }
-          }}
-          placeholder="Écrire un message..."
-          className="input flex-1 resize-none max-h-32 py-2"
-          maxLength={5000}
-        />
-        <button
-          type="submit"
-          disabled={!draft.trim() || sendMutation.isPending}
-          className="btn-primary p-2.5 flex-shrink-0 disabled:opacity-40"
-        >
-          {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
+      <form onSubmit={handleSend} className="border-t border-gray-100 dark:border-gray-800/60 p-3 space-y-2">
+        {sendError && (
+          <div className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+            <X className="w-3.5 h-3.5 flex-shrink-0" /> <span className="flex-1">{sendError}</span>
+          </div>
+        )}
+        {imagePreview && (
+          <div className="relative inline-block">
+            <img src={imagePreview} alt="aperçu" className="max-h-32 rounded-lg border border-gray-200 dark:border-gray-700" />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center shadow hover:bg-gray-700"
+              title="Retirer l'image"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            className="hidden"
+            onChange={e => pickImage(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2.5 flex-shrink-0 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+            title="Joindre une image"
+          >
+            <ImagePlus className="w-5 h-5" />
+          </button>
+          <textarea
+            rows={1}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onPaste={e => {
+              const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+              if (item) { const f = item.getAsFile(); if (f) { e.preventDefault(); pickImage(f); } }
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); }
+            }}
+            placeholder="Écrire un message ou coller une capture d'écran..."
+            className="input flex-1 resize-none max-h-32 py-2"
+            maxLength={5000}
+          />
+          <button
+            type="submit"
+            disabled={(!draft.trim() && !imageFile) || sendMutation.isPending}
+            className="btn-primary p-2.5 flex-shrink-0 disabled:opacity-40"
+          >
+            {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
+        </div>
       </form>
 
       {showManage && convo.is_group && (

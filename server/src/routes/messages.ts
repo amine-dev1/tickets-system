@@ -14,8 +14,13 @@
  *  - Superadmins do not spy on conversations: they only see their own.
  */
 
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import crypto from 'crypto';
 import { supabaseAdmin } from '../lib/supabase';
 import { requireAuth } from '../middleware/auth';
 import { companyScope, isStaff } from '../middleware/companyScope';
@@ -35,6 +40,45 @@ const sendLimiter = rateLimit({
   keyGenerator: (req: any) => req.user?.id ?? ipKeyGenerator(req),
   message: { error: 'Trop de messages envoyés. Veuillez patienter.' },
 });
+
+/* ── Image upload (messages & screenshots) ─────────────────────── */
+
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+const imageMulter = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, os.tmpdir()),
+    filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname) || '.png'}`),
+  }),
+  limits: { fileSize: MAX_IMAGE_SIZE },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('UNSUPPORTED_IMAGE_TYPE'));
+  },
+});
+
+/**
+ * Runs multer for an optional single `image` field. Multer ignores
+ * non-multipart requests, so plain JSON sends pass straight through.
+ * Multer errors are translated into clean 400s instead of 500s.
+ */
+function uploadImage(req: Request, res: Response, next: NextFunction): void {
+  imageMulter.single('image')(req, res, (err: any) => {
+    if (!err) { next(); return; }
+    if (err?.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ error: 'L\'image dépasse la taille maximale de 10 Mo.' });
+      return;
+    }
+    if (err?.message === 'UNSUPPORTED_IMAGE_TYPE') {
+      res.status(400).json({ error: 'Format d\'image non supporté (JPEG, PNG, GIF ou WebP).' });
+      return;
+    }
+    res.status(400).json({ error: 'Échec du téléversement de l\'image.' });
+  });
+}
+
+const MSG_COLS = 'id, conversation_id, sender_id, content, image_url, image_name, read_at, created_at';
 
 const PROFILE_COLS = 'id, full_name, email, avatar_url, role';
 
@@ -255,7 +299,7 @@ router.get('/conversations', async (req, res): Promise<void> => {
     const ids = allConvos.map((c: any) => c.id);
     const { data: msgs } = await supabaseAdmin
       .from('messages')
-      .select('id, conversation_id, sender_id, content, created_at, read_at')
+      .select(MSG_COLS)
       .in('conversation_id', ids)
       .order('created_at', { ascending: false });
 
@@ -601,7 +645,7 @@ router.get('/conversations/:id/messages', async (req, res): Promise<void> => {
     const limit = Math.min(parseInt(String(req.query.limit ?? '50'), 10) || 50, 200);
     let query = supabaseAdmin
       .from('messages')
-      .select('id, conversation_id, sender_id, content, read_at, created_at')
+      .select(MSG_COLS)
       .eq('conversation_id', convo.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -618,15 +662,33 @@ router.get('/conversations/:id/messages', async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/messages/conversations/:id/messages — send a message
-router.post('/conversations/:id/messages', sendLimiter, async (req, res): Promise<void> => {
+// POST /api/messages/conversations/:id/messages — send a message (text and/or image)
+router.post('/conversations/:id/messages', sendLimiter, uploadImage, async (req, res): Promise<void> => {
+  const file = req.file as Express.Multer.File | undefined;
+  const cleanupTmp = () => { if (file?.path) { try { fs.unlinkSync(file.path); } catch { /* ignore */ } } };
   try {
     const convo = await loadConversationForUser(String(req.params.id), req.user!.id);
-    if (!convo) { res.status(403).json({ error: 'Conversation introuvable ou accès refusé.' }); return; }
+    if (!convo) { cleanupTmp(); res.status(403).json({ error: 'Conversation introuvable ou accès refusé.' }); return; }
 
     const content: string = String(req.body?.content ?? '').trim();
-    if (!content) { res.status(400).json({ error: 'Le message ne peut pas être vide.' }); return; }
-    if (content.length > 5000) { res.status(400).json({ error: 'Le message dépasse 5000 caractères.' }); return; }
+    if (!content && !file) { res.status(400).json({ error: 'Le message ne peut pas être vide.' }); return; }
+    if (content.length > 5000) { cleanupTmp(); res.status(400).json({ error: 'Le message dépasse 5000 caractères.' }); return; }
+
+    // Upload the image (if any) to Supabase storage and keep its public URL.
+    let imageUrl: string | null = null;
+    let imageName: string | null = null;
+    if (file) {
+      const storagePath = `messages/${convo.id}/${file.filename}`;
+      const buffer = fs.readFileSync(file.path);
+      const { error: upErr } = await supabaseAdmin.storage
+        .from('attachments')
+        .upload(storagePath, buffer, { contentType: file.mimetype });
+      cleanupTmp();
+      if (upErr) { res.status(500).json({ error: 'Échec du téléversement de l\'image.' }); return; }
+      const { data: urlData } = supabaseAdmin.storage.from('attachments').getPublicUrl(storagePath);
+      imageUrl = urlData.publicUrl;
+      imageName = file.originalname;
+    }
 
     const now = new Date().toISOString();
 
@@ -636,9 +698,11 @@ router.post('/conversations/:id/messages', sendLimiter, async (req, res): Promis
         conversation_id: convo.id,
         company_id: convo.company_id,
         sender_id: req.user!.id,
-        content,
+        content: content || null,
+        image_url: imageUrl,
+        image_name: imageName,
       })
-      .select('id, conversation_id, sender_id, content, read_at, created_at')
+      .select(MSG_COLS)
       .single();
     if (error) throw error;
 
@@ -655,6 +719,7 @@ router.post('/conversations/:id/messages', sendLimiter, async (req, res): Promis
 
     res.status(201).json(msg);
   } catch (err: any) {
+    cleanupTmp();
     res.status(500).json({ error: err.message ?? 'Erreur interne.' });
   }
 });
