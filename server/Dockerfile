@@ -1,5 +1,5 @@
-# Use Node.js 20 (LTS)
-FROM node:20-alpine
+# Use Node.js 22 (LTS) — required for native WebSocket support (@supabase/supabase-js realtime)
+FROM node:22-alpine
 
 WORKDIR /app
 
