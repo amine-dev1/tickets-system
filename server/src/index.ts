@@ -24,9 +24,24 @@ const PORT = process.env.PORT || 4000;
 
 // Security Middleware
 app.use(helmet());
+
+// CLIENT_URL may be a comma-separated list of allowed origins.
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow non-browser clients (curl, server-to-server) with no Origin header.
+      if (!origin) return callback(null, true);
+      const ok =
+        allowedOrigins.includes(origin) ||
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) || // any localhost port (dev)
+        /\.vercel\.app$/.test(origin); // Vercel production + preview deployments
+      return ok ? callback(null, true) : callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
     credentials: true,
   })
 );
