@@ -4,7 +4,7 @@ import { Plus, Search, Briefcase, Building2, ChevronRight, Calendar, Banknote } 
 import { useMissions } from '../../hooks/useMissions';
 import { usePrestataires } from '../../hooks/usePrestataires';
 import { formatDate } from '../../lib/utils';
-import { Dropdown } from '../../components/ui/Dropdown';
+import { Select } from '../../components/ui/Select';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tous statuts' },
@@ -83,20 +83,21 @@ export function MissionsList() {
               className="input pl-10"
             />
           </div>
-          <Dropdown
+          <Select
             value={status}
             onChange={setStatus}
             options={STATUS_OPTIONS}
-            className="w-auto"
+            className="min-w-[160px]"
           />
-          <Dropdown
+          <Select
             value={prestataireId}
             onChange={setPrestataireId}
+            searchable
             options={[
               { value: 'all', label: 'Tous prestataires' },
               ...(prestataires?.map((p) => ({ value: p.id, label: p.name })) || []),
             ]}
-            className="w-auto"
+            className="min-w-[180px]"
           />
         </div>
 

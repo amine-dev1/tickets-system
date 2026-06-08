@@ -1,7 +1,8 @@
-import { Bell, Sun, Moon, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { isAdminRole } from '../../types';
+import { NotificationsMenu } from './NotificationsMenu';
 
 interface HeaderProps {
   title: string;
@@ -39,10 +40,7 @@ export function Header({ title, subtitle }: HeaderProps) {
           />
         </button>
 
-        <button id="notification-btn" className="btn-ghost relative p-2 rounded-xl">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full ring-2 ring-white animate-pulse dark:ring-gray-950" />
-        </button>
+        <NotificationsMenu />
 
         {isAdminRole(user?.role) && (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider

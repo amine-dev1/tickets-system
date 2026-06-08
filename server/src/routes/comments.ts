@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../lib/supabase';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
-import { companyScope } from '../middleware/companyScope';
+import { companyScope, isStaff, isEnterpriseAdmin } from '../middleware/companyScope';
 import { emailService } from '../services/emailService';
+import { notify, getCompanyAdminIds } from '../services/notificationService';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ router.get('/tickets/:ticketId/comments', async (req, res): Promise<void> => {
     }
 
     // Security: Only users in the same company or admins can fetch comments
-    if (req.userRole !== 'admin' && ticket.company_id !== req.companyId) {
+    if (req.userRole !== 'superadmin' && ticket.company_id !== req.companyId) {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
@@ -48,8 +49,8 @@ router.get('/tickets/:ticketId/comments', async (req, res): Promise<void> => {
       .eq('ticket_id', ticketId)
       .order('created_at', { ascending: true });
 
-    // Client can't see internal notes
-    if (req.userRole !== 'admin') {
+    // Only staff (superadmin, admin, agent) can see internal notes
+    if (!isStaff(req.userRole)) {
       query = query.eq('is_internal', false);
     }
 
@@ -83,7 +84,7 @@ router.post('/tickets/:ticketId/comments', validate(createCommentSchema), async 
     }
 
     // Verify access
-    if (req.userRole !== 'admin' && ticket.company_id !== req.companyId) {
+    if (req.userRole !== 'superadmin' && ticket.company_id !== req.companyId) {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
@@ -96,7 +97,7 @@ router.post('/tickets/:ticketId/comments', validate(createCommentSchema), async 
         company_id: ticket.company_id,
         author_id: req.user!.id,
         content,
-        is_internal: req.userRole === 'admin' ? is_internal : false,
+        is_internal: isStaff(req.userRole) ? is_internal : false,
       })
       .select('*, profiles:author_id (full_name, email, role)')
       .single();
@@ -109,13 +110,30 @@ router.post('/tickets/:ticketId/comments', validate(createCommentSchema), async 
     // Notify other party (if not internal note)
     if (!comment.is_internal) {
       const authorName = comment.profiles?.full_name || 'Support Staff';
-      if (req.userRole === 'admin') {
+      if (req.userRole === 'superadmin') {
         // Notify client
         await emailService.notifyNewComment(ticket.profiles?.email as string, ticketId as string, ticket.title, authorName, content, false);
       } else {
         // Notify admin
         await emailService.notifyNewComment('admin@example.com', ticketId as string, ticket.title, authorName, content, true);
       }
+    }
+
+    // In-app notification: notify admins when an agent comments on a ticket
+    if (req.userRole === 'agent') {
+      const adminIds = await getCompanyAdminIds(ticket.company_id, req.user!.id);
+      const authorName = comment.profiles?.full_name || 'Agent';
+      await notify({
+        recipientIds: adminIds,
+        actorId: req.user!.id,
+        companyId: ticket.company_id,
+        type: 'comment_added',
+        title: `${authorName} a ajouté un commentaire`,
+        message: content.slice(0, 140),
+        entity_type: 'ticket',
+        entity_id: ticketId as string,
+        link: `/tickets/${ticketId}`,
+      });
     }
 
     res.status(201).json(comment);
@@ -140,10 +158,23 @@ router.delete('/comments/:id', async (req, res): Promise<void> => {
       return;
     }
 
-    // Security check: Only author or admin can delete comment
-    if (req.userRole !== 'admin' && comment.author_id !== req.user!.id) {
+    // Security check: Author, enterprise admin (same company), or superadmin can delete
+    if (comment.author_id !== req.user!.id && !isEnterpriseAdmin(req.userRole)) {
       res.status(403).json({ error: 'Access denied.' });
       return;
+    }
+
+    // Enterprise admin can only delete comments in their company
+    if (req.userRole === 'admin') {
+      const { data: commentFull } = await supabaseAdmin
+        .from('ticket_comments')
+        .select('company_id')
+        .eq('id', id)
+        .single();
+      if (commentFull?.company_id !== req.companyId) {
+        res.status(403).json({ error: 'Access denied.' });
+        return;
+      }
     }
 
     const { error } = await supabaseAdmin.from('ticket_comments').delete().eq('id', id);

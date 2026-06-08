@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../lib/supabase';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
-import { companyScope } from '../middleware/companyScope';
+import { companyScope, requireEnterpriseAdmin } from '../middleware/companyScope';
+import { requirePermission } from '../middleware/checkPermission';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ router.use(companyScope);
 // Accessible to both 'admin' and 'client'
 
 // GET /api/prestataires - List all prestataires
-router.get('/', async (req, res): Promise<void> => {
+router.get('/', requirePermission('prestataires', 'view'), async (req, res): Promise<void> => {
   try {
     const { search, is_active, company_id } = req.query;
 
@@ -45,7 +46,7 @@ router.get('/', async (req, res): Promise<void> => {
       .select('*')
       .order('name', { ascending: true });
 
-    if (req.userRole === 'admin') {
+    if (req.userRole === 'superadmin') {
       if (company_id && company_id !== 'all') {
         query = query.eq('company_id', company_id as string);
       }
@@ -84,7 +85,7 @@ router.get('/:id', async (req, res): Promise<void> => {
       .select('*')
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       query = query.eq('company_id', req.companyId);
     }
 
@@ -107,10 +108,10 @@ router.get('/:id', async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/prestataires - Create a prestataire
-router.post('/', validate(createPrestataire), async (req, res): Promise<void> => {
+// POST /api/prestataires - Create a prestataire (enterprise admin or superadmin)
+router.post('/', requireEnterpriseAdmin, requirePermission('prestataires', 'create'), validate(createPrestataire), async (req, res): Promise<void> => {
   try {
-    const company_id = req.userRole === 'admin' ? req.body.company_id : req.companyId;
+    const company_id = req.userRole === 'superadmin' ? req.body.company_id : req.companyId;
 
     if (!company_id) {
        res.status(400).json({ error: 'Company ID required' });
@@ -134,8 +135,8 @@ router.post('/', validate(createPrestataire), async (req, res): Promise<void> =>
   }
 });
 
-// PATCH /api/prestataires/:id - Update a prestataire
-router.patch('/:id', validate(updatePrestataire), async (req, res): Promise<void> => {
+// PATCH /api/prestataires/:id - Update a prestataire (enterprise admin or superadmin)
+router.patch('/:id', requireEnterpriseAdmin, requirePermission('prestataires', 'edit'), validate(updatePrestataire), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     let query = supabaseAdmin
@@ -143,7 +144,7 @@ router.patch('/:id', validate(updatePrestataire), async (req, res): Promise<void
       .update({ ...req.body, updated_at: new Date().toISOString() })
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       query = query.eq('company_id', req.companyId);
     }
 
@@ -160,8 +161,8 @@ router.patch('/:id', validate(updatePrestataire), async (req, res): Promise<void
   }
 });
 
-// DELETE /api/prestataires/:id - Soft delete (deactivate) a prestataire
-router.delete('/:id', async (req, res): Promise<void> => {
+// DELETE /api/prestataires/:id - Soft delete (enterprise admin or superadmin)
+router.delete('/:id', requireEnterpriseAdmin, requirePermission('prestataires', 'delete'), async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -186,7 +187,7 @@ router.delete('/:id', async (req, res): Promise<void> => {
       .update({ is_active: false })
       .eq('id', id);
 
-    if (req.userRole !== 'admin') {
+    if (req.userRole !== 'superadmin') {
       query = query.eq('company_id', req.companyId);
     }
 

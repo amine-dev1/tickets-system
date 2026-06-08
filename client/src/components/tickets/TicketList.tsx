@@ -4,7 +4,7 @@ import { useTicketStore } from '../../store/ticketStore';
 import { useTickets } from '../../hooks/useTickets';
 import { TicketCard } from './TicketCard';
 import { ExportPdfModal } from './ExportPdfModal';
-import { Dropdown } from '../ui/Dropdown';
+import { Select } from '../ui/Select';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All Statuses' },
@@ -22,7 +22,7 @@ const PRIORITY_OPTIONS = [
   { value: 'low', label: 'Low' },
 ];
 
-import { isAdminRole } from '../../types';
+import { isAdminRole, isSuperAdmin, isStaff } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { usePrestataires } from '../../hooks/usePrestataires';
 import { useCompanies } from '../../hooks/useCompanies';
@@ -43,6 +43,8 @@ export function TicketList() {
     !!filters.search;
 
   const isAdmin = isAdminRole(user?.role);
+  // Only superadmin can see all companies' tickets
+  const showCompanyFilter = isSuperAdmin(user?.role);
 
   return (
     <div className="space-y-4">
@@ -59,41 +61,43 @@ export function TicketList() {
             className="input pl-9"
           />
         </div>
-        <Dropdown
+        <Select
           id="status-filter"
           value={filters.status}
-          onChange={(value) => setFilter('status', value)}
+          onChange={(v) => setFilter('status', v)}
           options={STATUS_OPTIONS}
-          className="w-auto"
+          className="min-w-[160px]"
         />
-        <Dropdown
+        <Select
           id="priority-filter"
           value={filters.priority}
-          onChange={(value) => setFilter('priority', value)}
+          onChange={(v) => setFilter('priority', v)}
           options={PRIORITY_OPTIONS}
-          className="w-auto"
+          className="min-w-[160px]"
         />
-        {isAdmin && (
-          <Dropdown
+        {showCompanyFilter && (
+          <Select
             id="company-filter"
             value={filters.company_id}
-            onChange={(value) => setFilter('company_id', value)}
+            onChange={(v) => setFilter('company_id', v)}
+            searchable
             options={[
               { value: 'all', label: 'All Companies' },
               ...(companies?.map((c) => ({ value: c.id, label: c.name })) || []),
             ]}
-            className="w-auto"
+            className="min-w-[180px]"
           />
         )}
-        <Dropdown
+        <Select
           id="prestataire-filter"
           value={filters.prestataire_id}
-          onChange={(value) => setFilter('prestataire_id', value)}
+          onChange={(v) => setFilter('prestataire_id', v)}
+          searchable
           options={[
             { value: 'all', label: 'All Prestataires' },
             ...(prestataires?.map((p) => ({ value: p.id, label: p.name })) || []),
           ]}
-          className="w-auto"
+          className="min-w-[180px]"
         />
         {hasActiveFilters && (
           <button onClick={resetFilters} className="btn-ghost text-xs">

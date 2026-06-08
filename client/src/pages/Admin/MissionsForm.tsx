@@ -6,13 +6,20 @@ import { z } from 'zod';
 import { ArrowLeft, Loader2, Save, Briefcase } from 'lucide-react';
 import { useMission, useCreateMission, useUpdateMission } from '../../hooks/useMissions';
 import { usePrestataires } from '../../hooks/usePrestataires';
-import { FormSelect } from '../../components/ui/FormSelect';
+import { Select } from '../../components/ui/Select';
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'En attente' },
+  { value: 'in_progress', label: 'En cours' },
+  { value: 'completed', label: 'Terminée' },
+  { value: 'cancelled', label: 'Annulée' },
+];
 
 const schema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
   description: z.string().optional(),
   prestataire_id: z.string().uuid('Sélectionner un prestataire'),
-  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).default('pending'),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   budget: z.string().optional(),
@@ -85,7 +92,7 @@ export function MissionsForm() {
   }
 
   return (
-    <div className="animate-fade-in max-w-2xl mx-auto space-y-6">
+    <div className="animate-fade-in max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="btn-ghost p-2" id="back-btn">
           <ArrowLeft className="w-4 h-4" />
@@ -102,48 +109,55 @@ export function MissionsForm() {
       </div>
 
       <div className="glass-card p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div>
-            <label className="label">Nom de la mission *</label>
-            <input
-              id="input-name"
-              {...register('name')}
-              className="input"
-              placeholder="ex: Refonte site e-commerce"
-            />
-            {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
-          </div>
-
-          <div>
-            <label className="label">Prestataire assigné *</label>
-            <Controller
-              name="prestataire_id"
-              control={control}
-              render={({ field }) => (
-                <FormSelect
-                  id="input-prestataire"
-                  {...field}
-                  options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
-                  placeholder="— Sélectionner —"
-                />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Row 1: name + prestataire */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Nom de la mission *</label>
+              <input
+                id="input-name"
+                {...register('name')}
+                className="input"
+                placeholder="ex: Refonte site e-commerce"
+              />
+              {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
+            </div>
+            <div>
+              <label className="label">Prestataire assigné *</label>
+              <Controller
+                name="prestataire_id"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    id="input-prestataire"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    searchable
+                    fullWidth
+                    placeholder="— Sélectionner —"
+                    options={prestataires?.map((p) => ({ value: p.id, label: p.name })) || []}
+                  />
+                )}
+              />
+              {errors.prestataire_id && (
+                <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.prestataire_id.message}</p>
               )}
-            />
-            {errors.prestataire_id && (
-              <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.prestataire_id.message}</p>
-            )}
+            </div>
           </div>
 
+          {/* Row 2: description */}
           <div>
             <label className="label">Description</label>
             <textarea
               id="input-description"
               {...register('description')}
-              className="input min-h-[100px]"
+              className="input min-h-[80px]"
               placeholder="Objectif et détails de la mission..."
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Row 3: dates + statut + budget */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <label className="label">Date de début</label>
               <input id="input-start" type="date" {...register('start_date')} className="input" />
@@ -152,24 +166,18 @@ export function MissionsForm() {
               <label className="label">Date de fin</label>
               <input id="input-end" type="date" {...register('end_date')} className="input" />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Statut</label>
               <Controller
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <FormSelect
+                  <Select
                     id="input-status"
-                    {...field}
-                    options={[
-                      { value: 'pending', label: 'En attente' },
-                      { value: 'in_progress', label: 'En cours' },
-                      { value: 'completed', label: 'Terminée' },
-                      { value: 'cancelled', label: 'Annulée' },
-                    ]}
+                    value={field.value}
+                    onChange={(v) => field.onChange(v)}
+                    options={STATUS_OPTIONS}
+                    fullWidth
                   />
                 )}
               />

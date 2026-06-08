@@ -4,10 +4,10 @@ import { useAddComment } from '../../hooks/useTickets';
 
 interface CommentFormProps {
   ticketId: string;
-  isAdmin?: boolean;
+  isStaff?: boolean;
 }
 
-export function CommentForm({ ticketId, isAdmin }: CommentFormProps) {
+export function CommentForm({ ticketId, isStaff }: CommentFormProps) {
   const [content, setContent] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const addComment = useAddComment(ticketId);
@@ -31,7 +31,7 @@ export function CommentForm({ ticketId, isAdmin }: CommentFormProps) {
         className="input resize-none"
       />
       <div className="flex items-center justify-between">
-        {isAdmin && (
+        {isStaff && (
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <div
               role="checkbox"
@@ -53,7 +53,7 @@ export function CommentForm({ ticketId, isAdmin }: CommentFormProps) {
             </span>
           </label>
         )}
-        {!isAdmin && <div />}
+        {!isStaff && <div />}
         <button
           type="submit"
           id="submit-comment-btn"

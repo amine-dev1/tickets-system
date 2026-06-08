@@ -16,7 +16,7 @@ export function loadData(table: string): any[] {
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(
       DB_FILE,
-      JSON.stringify({ tickets: [], ticket_comments: [], ticket_history: [], profiles: [], companies: [], prestataires: [], missions: [] }, null, 2)
+      JSON.stringify({ tickets: [], ticket_comments: [], ticket_history: [], ticket_attachments: [], profiles: [], companies: [], prestataires: [], missions: [], user_permissions: [] }, null, 2)
     );
   }
   try {
@@ -31,7 +31,7 @@ export function saveData(table: string, data: any[]) {
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(
       DB_FILE,
-      JSON.stringify({ tickets: [], ticket_comments: [], ticket_history: [], profiles: [], companies: [], prestataires: [], missions: [] }, null, 2)
+      JSON.stringify({ tickets: [], ticket_comments: [], ticket_history: [], ticket_attachments: [], profiles: [], companies: [], prestataires: [], missions: [], user_permissions: [] }, null, 2)
     );
   }
   try {

@@ -2,12 +2,12 @@ import { Loader2 } from 'lucide-react';
 import { useComments } from '../../hooks/useTickets';
 import { formatRelative, getInitials } from '../../lib/utils';
 import { useAuthStore } from '../../store/authStore';
-import { isAdminRole } from '../../types';
+import { isStaff } from '../../types';
 
 export function CommentList({ ticketId }: { ticketId: string }) {
   const { data: comments, isLoading } = useComments(ticketId);
   const { user } = useAuthStore();
-  const isAdmin = isAdminRole(user?.role);
+  const isUserStaff = isStaff(user?.role);
 
   if (isLoading) {
     return (
@@ -28,7 +28,7 @@ export function CommentList({ ticketId }: { ticketId: string }) {
   return (
     <div className="space-y-4">
       {comments
-        .filter((c) => isAdmin || !c.is_internal)
+        .filter((c) => isUserStaff || !c.is_internal)
         .map((comment) => (
           <div
             key={comment.id}

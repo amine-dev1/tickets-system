@@ -9,12 +9,17 @@ import path from 'path';
 
 import ticketRouter from './routes/tickets';
 import commentRouter from './routes/comments';
+import attachmentRouter from './routes/attachments';
 import adminRouter from './routes/admin';
 import prestatairesRouter from './routes/prestataires';
 import companiesRouter from './routes/companies';
 import missionsRouter from './routes/missions';
 import uploadRouter from './routes/uploads';
 import authRouter from './routes/auth';
+import notificationsRouter from './routes/notifications';
+import permissionsRouter from './routes/permissions';
+import messagesRouter from './routes/messages';
+import calendarRouter from './routes/calendar';
 import { isMock, loadData, saveData } from './lib/supabase';
 
 dotenv.config();
@@ -110,6 +115,9 @@ if (isMock) {
   });
 }
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/upload', uploadRouter);
@@ -118,7 +126,12 @@ app.use('/api/tickets', ticketRouter);
 app.use('/api/prestataires', prestatairesRouter);
 app.use('/api/missions', missionsRouter);
 app.use('/api', commentRouter);
+app.use('/api', attachmentRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/users', permissionsRouter);
+app.use('/api/messages', messagesRouter);
+app.use('/api/calendar', calendarRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // 404 handler
 app.use((req, res) => {

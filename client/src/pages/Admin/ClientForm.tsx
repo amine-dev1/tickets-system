@@ -75,7 +75,7 @@ export function ClientForm() {
   }
 
   return (
-    <div className="animate-fade-in max-w-2xl mx-auto space-y-6">
+    <div className="animate-fade-in max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="btn-ghost p-2">
           <ArrowLeft className="w-4 h-4" />

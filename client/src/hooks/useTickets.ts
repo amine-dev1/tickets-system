@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ticketsApi } from '../api/tickets';
 import { commentsApi } from '../api/comments';
+import { attachmentsApi } from '../api/attachments';
 import { useTicketStore } from '../store/ticketStore';
 import type { CreateTicketDTO, UpdateTicketDTO } from '../types';
 
@@ -79,5 +80,30 @@ export function useAddComment(ticketId: string) {
     mutationFn: ({ content, isInternal }: { content: string; isInternal?: boolean }) =>
       commentsApi.create(ticketId, content, isInternal),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['comments', ticketId] }),
+  });
+}
+
+// Attachments
+export function useAttachments(ticketId: string) {
+  return useQuery({
+    queryKey: ['attachments', ticketId],
+    queryFn: () => attachmentsApi.getByTicket(ticketId),
+    enabled: !!ticketId,
+  });
+}
+
+export function useUploadAttachments(ticketId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (files: File[]) => attachmentsApi.upload(ticketId, files),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments', ticketId] }),
+  });
+}
+
+export function useDeleteAttachment(ticketId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: string) => attachmentsApi.delete(attachmentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments', ticketId] }),
   });
 }

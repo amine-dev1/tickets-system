@@ -7,6 +7,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Zap, Mail, Lock, User, Building2, CheckCircle, Shield, Clock, Eye, EyeOff } from 'lucide-react';
 
+const AUTH_ERRORS: Record<string, string> = {
+  'Invalid login credentials':                                          'Email ou mot de passe incorrect.',
+  'Email not confirmed':                                                'Veuillez confirmer votre adresse email avant de vous connecter.',
+  'User not found':                                                     'Aucun compte trouvé avec cet email.',
+  'A user with this email address has already been registered':         'Un compte avec cette adresse email existe déjà.',
+  'Unable to validate email address: invalid format':                   'L\'adresse email est invalide.',
+  'Password should be at least 6 characters':                          'Le mot de passe doit contenir au moins 6 caractères.',
+  'New password should be different from the old password':            'Le nouveau mot de passe doit être différent de l\'ancien.',
+  'signup_disabled':                                                    'Les inscriptions sont désactivées.',
+  'over_email_send_rate_limit':                                         'Trop de tentatives. Veuillez patienter avant de réessayer.',
+  'For security purposes, you can only request this once every 60 seconds': 'Pour des raisons de sécurité, veuillez attendre 60 secondes avant de réessayer.',
+};
+
+const translateAuthError = (msg: string): string =>
+  AUTH_ERRORS[msg] ?? (/[àâäéèêëîïôùûüç]/i.test(msg) ? msg : 'Une erreur est survenue. Veuillez réessayer.');
+
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -44,7 +60,8 @@ export default function Login() {
   const handleLogin = async (data: LoginForm) => {
     setError('');
     const { error } = await supabase.auth.signInWithPassword(data);
-    if (error) setError(error.message);
+    if (error) { setError(translateAuthError(error.message)); return; }
+    navigate('/dashboard');
   };
 
   const handleRegister = async (data: RegisterForm) => {
@@ -53,7 +70,7 @@ export default function Login() {
       email: data.email,
       password: data.password,
     });
-    if (signUpError) { setError(signUpError.message); return; }
+    if (signUpError) { setError(translateAuthError(signUpError.message)); return; }
 
     if (authData.user) {
       await supabase.from('profiles').upsert({

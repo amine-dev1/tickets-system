@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
-import { isAdminRole } from '../types';
+import { isStaff } from '../types';
 
 /** Subscribe to real-time ticket changes for the current user */
 export function useRealtime() {
@@ -13,7 +13,7 @@ export function useRealtime() {
     if (!user) return;
 
     const filter =
-      isAdminRole(user.role)
+      isStaff(user.role)
         ? undefined
         : `client_id=eq.${user.id}`;
 

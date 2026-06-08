@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { useTickets } from '../../hooks/useTickets';
 import { usePrestataires } from '../../hooks/usePrestataires';
 import { exportTicketsPdf } from '../../lib/exportPdf';
-import { Dropdown } from '../ui/Dropdown';
+import { Select } from '../ui/Select';
 
 interface ExportPdfModalProps {
   onClose: () => void;
@@ -100,9 +100,11 @@ export function ExportPdfModal({ onClose }: ExportPdfModalProps) {
               <Building2 className="w-3.5 h-3.5 text-gray-400" />
               Prestataire
             </label>
-            <Dropdown
+            <Select
               value={prestataireId}
               onChange={setPrestataireId}
+              searchable
+              fullWidth
               options={[
                 { value: 'all', label: 'All Prestataires' },
                 ...(prestataires?.map((p) => ({ value: p.id, label: p.name })) || []),
@@ -115,10 +117,11 @@ export function ExportPdfModal({ onClose }: ExportPdfModalProps) {
               <Tag className="w-3.5 h-3.5 text-gray-400" />
               Status
             </label>
-            <Dropdown
+            <Select
               value={status}
               onChange={setStatus}
               options={STATUS_OPTIONS}
+              fullWidth
             />
           </div>
         </div>
