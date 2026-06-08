@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import { Header } from '../components/layout/Header';
+import { GoogleCalendarConnect } from '../components/calendar/GoogleCalendarConnect';
 import {
   ChevronLeft, ChevronRight, Plus, X, Loader2, Trash2, Save,
   Ticket as TicketIcon, Calendar as CalendarIcon, ExternalLink, AlertCircle,
@@ -126,6 +127,9 @@ export default function Calendar() {
       <Header title="Calendrier" subtitle="Gérez votre planning et visualisez les tickets" />
 
       <div className="px-6 space-y-4">
+        {/* Google Calendar / account connection */}
+        <GoogleCalendarConnect />
+
         {/* Toolbar */}
         <div className="glass-card px-4 py-3 flex flex-wrap items-center gap-3">
           <button onClick={goPrev} className="btn-ghost p-2" title="Mois précédent"><ChevronLeft className="w-4 h-4" /></button>

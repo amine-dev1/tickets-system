@@ -20,6 +20,7 @@ import notificationsRouter from './routes/notifications';
 import permissionsRouter from './routes/permissions';
 import messagesRouter from './routes/messages';
 import calendarRouter from './routes/calendar';
+import calendarGoogleRouter from './routes/calendarGoogle';
 import { isMock, loadData, saveData } from './lib/supabase';
 
 dotenv.config();
@@ -130,6 +131,7 @@ app.use('/api', attachmentRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/users', permissionsRouter);
 app.use('/api/messages', messagesRouter);
+app.use('/api/calendar/google', calendarGoogleRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/notifications', notificationsRouter);
 
