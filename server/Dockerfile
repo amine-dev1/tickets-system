@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Compile TypeScript ahead of time — running compiled JS avoids ts-node's
+# runtime type-checking, which was exhausting the machine's heap at boot.
+RUN npm run build
+
 # Expose port
 EXPOSE 4000
 
