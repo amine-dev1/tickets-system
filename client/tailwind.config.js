@@ -75,6 +75,7 @@ export default {
         'pulse-glow':    'pulseGlow 2.5s ease-in-out infinite',
         'float':         'float 4s ease-in-out infinite',
         'gradient':      'gradient 6s ease infinite',
+        'spin-slow':     'spin 24s linear infinite',
       },
       keyframes: {
         fadeIn: {
