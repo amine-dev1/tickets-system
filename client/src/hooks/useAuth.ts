@@ -17,8 +17,22 @@ export function useAuth() {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       setSession(session);
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        // Fired when Supabase silently refreshes the session (e.g. on tab focus).
+        // The profile is already loaded, so don't toggle the loading state again -
+        // re-fetching here can hang and leave the app stuck on the loading spinner.
+        return;
+      }
+
       if (session?.user) {
         await fetchProfile(session.user.id);
       } else {
