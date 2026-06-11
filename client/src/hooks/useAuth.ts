@@ -6,17 +6,9 @@ export function useAuth() {
   const { setUser, setSession, setLoading } = useAuthStore();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
+    // onAuthStateChange fires once with INITIAL_SESSION as soon as it's
+    // subscribed, so a separate getSession() call isn't needed and only
+    // risks a duplicate/racy fetchProfile call.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       setSession(session);
 
@@ -46,12 +38,18 @@ export function useAuth() {
 
   async function fetchProfile(userId: string) {
     setLoading(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('*, company:company_id (id, name, slug, logo_url)')
-      .eq('id', userId)
-      .single();
-    setUser(data);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*, company:company_id (id, name, slug, logo_url)')
+        .eq('id', userId)
+        .single();
+      setUser(data);
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }
 }
