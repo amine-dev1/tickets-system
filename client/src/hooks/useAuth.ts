@@ -6,28 +6,40 @@ export function useAuth() {
   const { setUser, setSession, setLoading } = useAuthStore();
 
   useEffect(() => {
-    // onAuthStateChange fires once with INITIAL_SESSION as soon as it's
-    // subscribed, so a separate getSession() call isn't needed and only
-    // risks a duplicate/racy fetchProfile call.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+    // Only the first auth event should drive the full-page loading spinner.
+    // Later events (SIGNED_IN on tab refocus, etc.) refresh the profile silently.
+    let resolvedInitial = false;
+
+    // IMPORTANT: this callback is intentionally NOT async and must not call
+    // other Supabase methods directly. The callback runs while Supabase holds
+    // its internal auth lock (navigator.locks); calling supabase.from(...) /
+    // getSession() in here would try to re-acquire that same lock and deadlock,
+    // which is what left the app stuck on the loading spinner after switching
+    // tabs. We defer all Supabase work to a macrotask so the lock is released
+    // first. See https://github.com/supabase/auth-js (onAuthStateChange notes).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setSession(session);
 
       if (event === 'SIGNED_OUT') {
+        resolvedInitial = true;
         setUser(null);
         setLoading(false);
         return;
       }
 
       if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        // Fired when Supabase silently refreshes the session (e.g. on tab focus).
-        // The profile is already loaded, so don't toggle the loading state again -
-        // re-fetching here can hang and leave the app stuck on the loading spinner.
+        // Silent session refresh (e.g. on tab focus). Profile is already loaded;
+        // nothing to do, and crucially don't toggle the loading state.
         return;
       }
 
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        const showLoading = !resolvedInitial;
+        resolvedInitial = true;
+        // Defer out of the auth-lock callback to avoid a deadlock.
+        setTimeout(() => fetchProfile(session.user.id, showLoading), 0);
       } else {
+        resolvedInitial = true;
         setUser(null);
         setLoading(false);
       }
@@ -36,8 +48,8 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchProfile(userId: string) {
-    setLoading(true);
+  async function fetchProfile(userId: string, showLoading: boolean) {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await supabase
         .from('profiles')
@@ -47,9 +59,8 @@ export function useAuth() {
       setUser(data);
     } catch (err) {
       console.error('Failed to load profile:', err);
-      setUser(null);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }
 }
